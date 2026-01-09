@@ -1,72 +1,605 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Hand Gesture AI</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aakansha Store - Gourmet Food </title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Dancing+Script:wght@500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --sky-500: #0ea5e9;
+            --sky-600: #0284c7;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-400: #94a3b8;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --white: #ffffff;
+            --rose-500: #f43f5e;
+            --emerald-500: #10b981;
+            --safe-area-bottom: env(safe-area-inset-bottom);
+        }
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+        .dark {
+            --slate-50: #0f172a;
+            --slate-100: #1e293b;
+            --slate-200: #334155;
+            --slate-900: #f8fafc;
+            --white: #0f172a;
+        }
 
-<style>
-  body {
-    margin: 0;
-    background: #000;
-    color: #0f0;
-    font-family: system-ui, sans-serif;
-    text-align: center;
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background-color: var(--slate-50); 
+            color: var(--slate-700); 
+            overflow-x: hidden; 
+            transition: background-color 0.3s; 
+            user-select: none;
+        }
+
+        .cursive { font-family: 'Dancing Script', cursive; }
+        
+        button { 
+            cursor: pointer; 
+            border: none; 
+            background: none; 
+            font-family: inherit; 
+            transition: 0.2s; 
+            touch-action: manipulation;
+        }
+        
+        button:active { transform: scale(0.95); }
+
+        input { font-family: inherit; border: none; outline: none; width: 100%; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes borderGrow { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-fade-up { animation: fadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed; inset: 0; z-index: 9999; background: #adc9f3;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 1s; padding: 2rem;
+        }
+        #loading-screen img { width: 100%; max-width: 320px; object-fit: contain; margin-bottom: 2rem; }
+        #loading-screen h2 { color: #1a365d; font-size: clamp(2rem, 8vw, 3rem); margin-bottom: 1rem; text-align: center; }
+
+        /* Header Strip */
+        .header-strip {
+            height: 54px; background: white; border-bottom: 1px solid var(--slate-100);
+            position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+        }
+        .growing-border::before {
+            content: ''; position: absolute; inset: -1px; z-index: -1;
+            background: linear-gradient(90deg, #7c3aed, #2563eb, #10b981, #7c3aed);
+            background-size: 200% auto; animation: borderGrow 4s linear infinite;
+        }
+
+        /* Navbar */
+        .navbar {
+            position: sticky; top: 0; z-index: 100; background: var(--white);
+            height: 64px; display: flex; align-items: center; border-bottom: 1px solid var(--slate-100);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .container { max-width: 1440px; margin: 0 auto; width: 100%; padding: 0 1rem; }
+        .navbar-content { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        
+        .search-box { flex: 1; max-width: 400px; background: var(--slate-100); border-radius: 12px; height: 40px; display: flex; align-items: center; padding: 0 0.75rem; }
+        .search-box input { background: transparent; padding: 0 0.5rem; font-size: 14px; color: var(--slate-800); }
+
+        @media (max-width: 768px) {
+            .search-box { display: none; }
+        }
+
+        /* Carousel */
+        .carousel { height: clamp(200px, 40vw, 400px); margin: 0.75rem; border-radius: 16px; overflow: hidden; position: relative; }
+        .carousel-track { display: flex; height: 100%; transition: 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
+        .carousel-slide { min-width: 100%; height: 100%; position: relative; }
+        .carousel-slide img { width: 100%; height: 100%; object-fit: cover; }
+        .carousel-overlay { position: absolute; inset: 0; background: linear-gradient(to right, rgba(0,0,0,0.6), transparent); display: flex; flex-direction: column; justify-content: center; padding: 0 1.5rem; color: white; }
+        .carousel-overlay h2 { font-size: clamp(1.2rem, 5vw, 2.5rem); font-weight: 800; line-height: 1.2; }
+
+        /* Product Grid */
+        .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; padding: 1rem 0; }
+        @media (min-width: 1024px) {
+            .product-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
+        }
+        
+        .product-card { background: white; border-radius: 16px; border: 1px solid var(--slate-100); padding: 0.75rem; cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; }
+        .product-img { aspect-ratio: 1; overflow: hidden; margin-bottom: 0.5rem; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; }
+        .product-img img { max-width: 100%; max-height: 100%; object-fit: contain; padding: 0.25rem; }
+
+        /* Bottom Nav */
+        .bottom-nav { 
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            height: calc(64px + var(--safe-area-bottom)); 
+            background: var(--white); border-top: 1px solid var(--slate-100); 
+            display: flex; justify-content: space-around; align-items: flex-start; 
+            padding-top: 10px; z-index: 100; 
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
+        }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; color: var(--slate-400); font-size: 10px; font-weight: 700; gap: 4px; flex: 1; }
+        .nav-btn.active { color: var(--sky-500); }
+        .nav-btn svg { width: 22px; height: 22px; }
+
+        /* Detail View */
+        .detail-container { display: flex; flex-direction: column; gap: 1.5rem; padding: 1rem 0 5rem; }
+        @media (min-width: 1024px) {
+            .detail-container { flex-direction: row; gap: 3rem; }
+            .detail-img-box { flex: 1; }
+            .detail-info { flex: 1; }
+        }
+        .detail-img-box { width: 100%; background: white; border-radius: 20px; padding: 1rem; border: 1px solid var(--slate-100); display: flex; align-items: center; justify-content: center; aspect-ratio: 1; }
+        .detail-info h1 { font-size: clamp(1.8rem, 6vw, 3rem); font-weight: 800; line-height: 1.1; }
+
+        /* Views */
+        .view { display: none; padding-bottom: 80px; }
+        .view.active { display: block; }
+
+        /* Mobile Search Overlay */
+        #mobile-search-overlay {
+            position: fixed; inset: 0; z-index: 2000; background: var(--white);
+            display: none; flex-direction: column; padding: 1rem;
+        }
+        #mobile-search-overlay.active { display: flex; animation: fadeIn 0.2s ease-out; }
+        .mobile-search-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+        .mobile-search-input-wrap { flex: 1; background: var(--slate-100); border-radius: 12px; height: 48px; display: flex; align-items: center; padding: 0 1rem; }
+
+        /* Toast */
+        #toast { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 0.75rem 1.5rem; border-radius: 99px; font-size: 14px; z-index: 1000; opacity: 0; transition: 0.3s; pointer-events: none; }
+        #toast.show { opacity: 1; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react/": "https://esm.sh/react@^19.2.3/"
   }
-  h2 { margin: 10px 0; }
-  video {
-    width: 95%;
-    max-width: 420px;
-    border-radius: 14px;
-    margin-top: 10px;
-  }
-  #status {
-    margin-top: 12px;
-    font-size: 18px;
-  }
-</style>
-</head>
-
-<body>
-  <h2>✋ Hand Gesture AI</h2>
-  <video id="video" autoplay playsinline></video>
-  <div id="status">Camera starting…</div>
-
-<script>
-const video = document.getElementById("video");
-const statusText = document.getElementById("status");
-
-const hands = new Hands({
-  locateFile: (file) =>
-    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-});
-
-hands.setOptions({
-  maxNumHands: 1,
-  minDetectionConfidence: 0.7,
-  minTrackingConfidence: 0.7
-});
-
-hands.onResults(results => {
-  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-    statusText.innerText = "✅ Hand Detected";
-  } else {
-    statusText.innerText = "❌ No Hand";
-  }
-});
-
-const camera = new Camera(video, {
-  onFrame: async () => {
-    await hands.send({ image: video });
-  },
-  width: 640,
-  height: 480
-});
-
-camera.start();
+}
 </script>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="animate-fade-up" style="text-align: center;">
+            <img src="https://wallpapers.com/images/thumbnail/doraemon-and-friends-adventure-fall-mgdlpv08nqjwidgd.webp" alt="Aakansha Store Loading">
+            <h2 class="cursive">Believe in yourself!</h2>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0.5;">
+                <div style="width: 30px; height: 1px; background: #1a365d;"></div>
+                <span style="font-size: 10px; font-weight: 900; letter-spacing: 0.4em; color: #1a365d;">Aakansha Store</span>
+                <div style="width: 30px; height: 1px; background: #1a365d;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Search Overlay -->
+    <div id="mobile-search-overlay">
+        <div class="mobile-search-header">
+            <button onclick="toggleMobileSearch(false)" style="padding: 10px;"><i data-lucide="arrow-left"></i></button>
+            <div class="mobile-search-input-wrap">
+                <i data-lucide="search" size="18" style="color: var(--slate-400);"></i>
+                <input type="text" placeholder="Search pizza, burger, coffee..." id="mobile-search-input">
+            </div>
+        </div>
+        <div id="mobile-search-results" class="product-grid no-scrollbar" style="overflow-y: auto;"></div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" style="display: none;">
+        
+        <!-- Top Promo Strip -->
+        <div class="header-strip growing-border">
+            <div style="background: white; padding: 4px 12px; border-radius: 6px; display: flex; align-items: center; gap: 10px; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <span style="font-size: 14px; font-weight: 700; color: var(--rose-500); text-transform: uppercase;">Aakansha Store</span>
+                <div style="width: 1px; height: 14px; background: #eee;"></div>
+                <span style="font-weight: 900; font-size: 14px; color: var(--sky-600);">FLAT 25% OFF</span>
+            </div>
+        </div>
+
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="container">
+                <div class="navbar-content">
+                    <div onclick="navigate('home')" style="cursor: pointer;">
+                        <h1 style="font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--sky-500);">Aakansha<span style="color: var(--slate-800);">Store</span></h1>
+                        <p style="font-size: 8px; font-weight: 900; color: var(--slate-400); letter-spacing: 0.1em; text-transform: uppercase;">Snacks Shop</p>
+                    </div>
+                    <div class="search-box">
+                        <i data-lucide="search" size="16" style="color: var(--slate-400);"></i>
+                        <input type="text" placeholder="Search for food..." id="search-input">
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="md:hidden" onclick="toggleMobileSearch(true)" style="padding: 10px; display: block;" id="mobile-search-btn"><i data-lucide="search"></i></button>
+                        <button onclick="toggleTheme()" style="padding: 10px;"><i data-lucide="moon" id="theme-icon"></i></button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="container" id="content">
+            <!-- Home -->
+            <div id="view-home" class="view active">
+                <div class="carousel">
+                    <div class="carousel-track" id="carousel-track"></div>
+                </div>
+                
+                <h3 style="font-size: 1.25rem; font-weight: 800; margin: 1.5rem 0 1rem; text-transform: uppercase;">Cuisines</h3>
+                <div class="no-scrollbar" style="display: flex; gap: 1rem; overflow-x: auto; padding: 0.5rem 0.25rem 1rem;" id="category-list"></div>
+
+                <h3 style="font-size: 1.25rem; font-weight: 800; margin: 1.5rem 0 1rem; text-transform: uppercase;" id="product-section-title">Our Menu</h3>
+                <div class="product-grid" id="product-grid"></div>
+            </div>
+
+            <!-- Detail -->
+            <div id="view-detail" class="view">
+                <button onclick="navigate('home')" style="margin: 1rem 0; display: flex; align-items: center; gap: 8px; font-weight: 800; color: var(--slate-400); font-size: 12px;">
+                    <i data-lucide="arrow-left" size="16"></i> BACK TO MENU
+                </button>
+                <div id="detail-content"></div>
+            </div>
+
+            <!-- Cart -->
+            <div id="view-cart" class="view">
+                <h1 style="font-size: 2rem; font-weight: 800; margin: 1.5rem 0;">My Plate</h1>
+                <div id="cart-list" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                <div id="cart-summary" style="margin-top: 1.5rem; padding: 1.25rem; background: white; border-radius: 16px; border: 1px solid var(--slate-100);"></div>
+            </div>
+
+            <!-- Favorites -->
+            <div id="view-favorites" class="view">
+                <h1 style="font-size: 2rem; font-weight: 800; margin: 1.5rem 0;">Favorites</h1>
+                <div class="product-grid" id="favorites-grid"></div>
+            </div>
+
+            <!-- Profile -->
+            <div id="view-profile" class="view">
+                <div style="max-width: 480px; margin: 2rem auto; background: white; border-radius: 20px; padding: 1.5rem; border: 1px solid var(--slate-100); text-align: center;">
+                    <div style="width: 72px; height: 72px; background: var(--slate-100); border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="user" size="32"></i>
+                    </div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800;">Dhamnod Diner</h2>
+                    <p style="color: var(--slate-400); margin-bottom: 1.5rem; font-size: 13px;">Gourmet Member</p>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button style="width: 100%; padding: 0.85rem; background: var(--slate-50); border-radius: 10px; font-weight: 600; text-align: left; font-size: 14px;">Order History</button>
+                        <button style="width: 100%; padding: 0.85rem; background: var(--slate-50); border-radius: 10px; font-weight: 600; text-align: left; font-size: 14px;">My Address</button>
+                        <button style="width: 100%; padding: 0.85rem; background: var(--rose-500); color: white; border-radius: 10px; font-weight: 800; margin-top: 1rem; font-size: 14px;">LOGOUT</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Tab Nav -->
+        <div class="bottom-nav">
+            <button class="nav-btn active" id="tab-home" onclick="navigate('home')"><i data-lucide="utensils"></i>MENU</button>
+            <button class="nav-btn" id="tab-favorites" onclick="navigate('favorites')"><i data-lucide="heart"></i>FAVES</button>
+            <button class="nav-btn" id="tab-cart" onclick="navigate('cart')"><i data-lucide="shopping-bag"></i>PLATE</button>
+            <button class="nav-btn" id="tab-profile" onclick="navigate('profile')"><i data-lucide="user"></i>USER</button>
+        </div>
+
+        <!-- Mobile-Friendly Footer -->
+        <footer style="margin-top: 2rem; padding: 3rem 1rem; border-top: 1px solid var(--slate-100); text-align: center; background: white;">
+            <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--sky-500);">Aakansha Store</h2>
+            <p style="color: var(--slate-400); max-width: 320px; margin: 0 auto 1rem; font-size: 12px;">Dhamnod's best destination for Pizza, Burgers, and Coffee. Located at HP Petrol Pump side.</p>
+            <div style="display: flex; justify-content: center; gap: 1.5rem; color: var(--slate-400); margin-bottom: 1rem;">
+                <i data-lucide="instagram" size="18"></i>
+                <i data-lucide="map-pin" size="18"></i>
+            </div>
+            <p style="font-size: 10px; font-weight: 600; color: var(--slate-300);">© 2024 Aakansha Store GOURMET HUB</p>
+        </footer>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast">Added to plate!</div>
+
+    <script>
+        // --- Mock Data ---
+        const CATEGORIES = [
+            { id: "Pizza", img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200" },
+            { id: "Burgers", img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200" },
+            { id: "Chinese", img: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=200" },
+            { id: "Coffee", img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200" },
+            { id: "Noodles", img: "https://images.unsplash.com/photo-1612927601601-6638404737ce?w=200" },
+            { id: "Desserts", img: "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=200" }
+        ];
+
+        const BANNERS = [
+            { title: "Pizza Festival", sub: "Flat 25% OFF on all items", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200" },
+            { title: "Fresh Coffee", sub: "Premium Roasted Beans", img: "https://images.unsplash.com/photo-1544145945-f904253d0c71?w=1200" },
+            { title: "Late Night Delivery", sub: "Craving? We deliver till 12 AM", img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1200" }
+        ];
+
+        let products = [];
+        let cart = [];
+        let favorites = [];
+
+        function generateProducts() {
+            const templates = [
+                { name: "Farmhouse Pizza", cat: "Pizza", img: "https://images.unsplash.com/photo-1574071318508-1cdbad80ad38" },
+                { name: "Maharaja Burger", cat: "Burgers", img: "https://images.unsplash.com/photo-1550547660-d9450f859349" },
+                { name: "Schezwan Noodles", cat: "Chinese", img: "https://images.unsplash.com/photo-1585032226651-759b368d7246" },
+                { name: "Caramel Macchiato", cat: "Coffee", img: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735" },
+                { name: "Chocolate Lava Cake", cat: "Desserts", img: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51" }
+            ];
+            for(let i=1; i<=24; i++) {
+                const t = templates[i % templates.length];
+                products.push({
+                    id: i,
+                    name: `${t.name} ${i}`,
+                    cat: t.cat,
+                    price: Math.floor(Math.random() * 400) + 99,
+                    img: `${t.img}?w=400`,
+                    rating: (4 + Math.random()).toFixed(1)
+                });
+            }
+        }
+
+        // --- Core Functions ---
+        function navigate(viewName, productId = null) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            const targetView = document.getElementById('view-' + viewName);
+            if(targetView) targetView.classList.add('active');
+            
+            const targetTab = document.getElementById('tab-' + viewName);
+            if(targetTab) targetTab.classList.add('active');
+
+            if(viewName === 'detail' && productId) renderDetail(productId);
+            if(viewName === 'cart') renderCart();
+            if(viewName === 'favorites') renderFavorites();
+
+            window.scrollTo(0, 0);
+            toggleMobileSearch(false);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2000);
+        }
+
+        function toggleMobileSearch(show) {
+            const overlay = document.getElementById('mobile-search-overlay');
+            if (show) {
+                overlay.classList.add('active');
+                document.getElementById('mobile-search-input').focus();
+            } else {
+                overlay.classList.remove('active');
+                document.getElementById('mobile-search-input').value = '';
+                document.getElementById('mobile-search-results').innerHTML = '';
+            }
+        }
+
+        // --- Renderers ---
+        function renderHome() {
+            const track = document.getElementById('carousel-track');
+            track.innerHTML = BANNERS.map(b => `
+                <div class="carousel-slide">
+                    <img src="${b.img}" alt="">
+                    <div class="carousel-overlay">
+                        <h2>${b.title}</h2>
+                        <p>${b.sub}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            const catList = document.getElementById('category-list');
+            catList.innerHTML = CATEGORIES.map(c => `
+                <div onclick="filterProducts('${c.id}')" style="flex-shrink: 0; text-align: center; cursor: pointer;">
+                    <div style="width: 56px; height: 56px; border-radius: 50%; overflow: hidden; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 6px;">
+                        <img src="${c.img}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <span style="font-size: 10px; font-weight: 800; color: var(--slate-400);">${c.id}</span>
+                </div>
+            `).join('');
+
+            renderProductGrid('product-grid', products);
+        }
+
+        function renderProductGrid(targetId, list) {
+            const grid = document.getElementById(targetId);
+            if (!grid) return;
+            
+            grid.innerHTML = list.map(p => `
+                <div class="product-card animate-fade-up" onclick="navigate('detail', ${p.id})">
+                    <div class="product-img">
+                        <img src="${p.img}">
+                    </div>
+                    <span style="font-size: 8px; font-weight: 900; color: var(--sky-500); text-transform: uppercase; letter-spacing: 0.05em;">${p.cat}</span>
+                    <h4 style="font-size: 13px; font-weight: 700; margin: 4px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 6px;">
+                        <span style="font-weight: 800; font-size: 14px;">₹${p.price}</span>
+                        <div style="display: flex; align-items: center; gap: 2px; color: #10b981; font-size: 10px; font-weight: 800;">
+                            ${p.rating} <i data-lucide="star" size="10" fill="currentColor"></i>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function filterProducts(cat) {
+            const filtered = products.filter(p => p.cat === cat);
+            document.getElementById('product-section-title').innerText = cat;
+            renderProductGrid('product-grid', filtered);
+            document.getElementById('product-section-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderDetail(id) {
+            const p = products.find(prod => prod.id === id);
+            const container = document.getElementById('detail-content');
+            container.innerHTML = `
+                <div class="detail-container animate-fade-in">
+                    <div class="detail-img-box">
+                        <img src="${p.img}">
+                    </div>
+                    <div class="detail-info">
+                        <span style="color: var(--sky-500); font-weight: 900; font-size: 12px; text-transform: uppercase;">${p.cat}</span>
+                        <h1>${p.name}</h1>
+                        <div style="display: flex; align-items: center; gap: 8px; margin: 0.5rem 0;">
+                             <div style="background: #f0fdf4; color: #10b981; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
+                                ${p.rating} <i data-lucide="star" size="12" fill="currentColor"></i>
+                            </div>
+                            <span style="color: var(--slate-400); font-size: 12px;">(100+ Reviews)</span>
+                        </div>
+                        <p style="color: var(--slate-500); line-height: 1.5; font-size: 14px;">Authentic taste prepared fresh at Aakansha Store kitchen in Dhamnod. We use premium ingredients for the best gourmet experience.</p>
+                        <div style="font-size: 2rem; font-weight: 900; margin: 1rem 0;">₹${p.price}</div>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button onclick="addToCart(${p.id})" style="flex: 1; background: var(--sky-600); color: white; height: 50px; border-radius: 12px; font-weight: 800;">ADD TO PLATE</button>
+                            <button onclick="toggleFavorite(${p.id})" style="width: 50px; height: 50px; border: 1px solid var(--slate-200); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="heart" class="${favorites.includes(p.id) ? 'fill-rose-500 text-rose-500' : 'text-slate-300'}"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function addToCart(id) {
+            const p = products.find(prod => prod.id === id);
+            cart.push(p);
+            showToast("Added to your plate!");
+        }
+
+        function toggleFavorite(id) {
+            const idx = favorites.indexOf(id);
+            if(idx > -1) favorites.splice(idx, 1);
+            else favorites.push(id);
+            renderDetail(id);
+        }
+
+        function renderCart() {
+            const list = document.getElementById('cart-list');
+            if(cart.length === 0) {
+                list.innerHTML = `<div style="text-align: center; color: var(--slate-400); padding: 4rem 1rem;">
+                    <i data-lucide="shopping-bag" size="48" style="margin-bottom: 1rem; opacity: 0.2;"></i>
+                    <p>Your plate is empty. Add some food!</p>
+                </div>`;
+                document.getElementById('cart-summary').style.display = 'none';
+                lucide.createIcons();
+                return;
+            }
+            document.getElementById('cart-summary').style.display = 'block';
+            list.innerHTML = cart.map((p, i) => `
+                <div style="display: flex; gap: 0.75rem; background: white; padding: 0.75rem; border-radius: 12px; border: 1px solid var(--slate-100); align-items: center;">
+                    <img src="${p.img}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
+                    <div style="flex: 1;">
+                        <h4 style="font-weight: 700; font-size: 13px;">${p.name}</h4>
+                        <p style="font-weight: 800; font-size: 13px;">₹${p.price}</p>
+                    </div>
+                    <button onclick="removeFromCart(${i})" style="color: var(--rose-500); padding: 5px;"><i data-lucide="trash-2" size="18"></i></button>
+                </div>
+            `).join('');
+            
+            const total = cart.reduce((acc, curr) => acc + curr.price, 0);
+            document.getElementById('cart-summary').innerHTML = `
+                <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 800; margin-bottom: 1rem;">
+                    <span>Total</span>
+                    <span>₹${total}</span>
+                </div>
+                <button onclick="alert('Order Successful!')" style="width: 100%; background: var(--sky-600); color: white; padding: 1rem; border-radius: 12px; font-weight: 800;">CONFIRM ORDER</button>
+            `;
+            lucide.createIcons();
+        }
+
+        function removeFromCart(idx) {
+            cart.splice(idx, 1);
+            renderCart();
+        }
+
+        function renderFavorites() {
+            const grid = document.getElementById('favorites-grid');
+            const faves = products.filter(p => favorites.includes(p.id));
+            if(faves.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem 1rem; color: var(--slate-400);">
+                    <i data-lucide="heart" size="48" style="margin-bottom: 1rem; opacity: 0.2;"></i>
+                    <p>No favorites yet. Start liking some food!</p>
+                </div>`;
+                lucide.createIcons();
+                return;
+            }
+            renderProductGrid('favorites-grid', faves);
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            if (document.body.classList.contains('dark')) {
+                icon.setAttribute('data-lucide', 'sun');
+            } else {
+                icon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+        }
+
+        // --- App Lifecycle ---
+        window.onload = () => {
+            generateProducts();
+            renderHome();
+            
+            // Carousel Loop
+            let bannerIndex = 0;
+            setInterval(() => {
+                const track = document.getElementById('carousel-track');
+                if(track) {
+                    bannerIndex = (bannerIndex + 1) % BANNERS.length;
+                    track.style.transform = `translateX(-${bannerIndex * 100}%)`;
+                }
+            }, 5000);
+
+            // Hide Loading Screen
+            setTimeout(() => {
+                const ls = document.getElementById('loading-screen');
+                if(ls) {
+                    ls.style.opacity = '0';
+                    setTimeout(() => {
+                        ls.style.display = 'none';
+                        document.getElementById('app').style.display = 'block';
+                        lucide.createIcons();
+                    }, 1000);
+                }
+            }, 2500);
+            
+            // Search Functionality
+            const handleSearchInput = (e) => {
+                const q = e.target.value.toLowerCase();
+                const filtered = products.filter(p => p.name.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q));
+                if (e.target.id === 'mobile-search-input') {
+                    renderProductGrid('mobile-search-results', filtered);
+                } else {
+                    renderProductGrid('product-grid', filtered);
+                    document.getElementById('product-section-title').innerText = q ? "Search Results" : "Our Menu";
+                }
+            };
+
+            document.getElementById('search-input').oninput = handleSearchInput;
+            document.getElementById('mobile-search-input').oninput = handleSearchInput;
+        };
+    </script>
 </body>
 </html>
